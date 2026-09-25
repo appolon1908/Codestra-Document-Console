@@ -1,0 +1,8 @@
+*
+!Dockerfile
+!requirements.lock
+!pyproject.toml
+!README.md
+!console/
+!console/**
+**/__pycache__
