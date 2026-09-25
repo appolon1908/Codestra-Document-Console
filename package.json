@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "test": "playwright test",
+    "test:contract": "node --test tests/node/*.test.mjs",
     "build": "node --check console/static/app.js && node --check console/static/api.js"
   },
   "devDependencies": {

@@ -93,7 +93,7 @@ function scanPage(signal) {
       type: "file",
       id: side,
       name: side,
-      accept: "image/jpeg,image/png,image/webp",
+      accept: "image/jpeg,image/png",
       required: side === "front",
     });
     let objectURL;
@@ -107,15 +107,15 @@ function scanPage(signal) {
       const file = input.files[0];
       if (!file) return;
       if (
-        !["image/jpeg", "image/png", "image/webp"].includes(file.type) ||
-        file.size > 10 * 1024 * 1024 ||
+        !["image/jpeg", "image/png"].includes(file.type) ||
+        file.size > 8 * 1024 * 1024 ||
         !file.size
       ) {
         input.value = "";
         showError(
           errors,
           new Error(
-            "Choose a non-empty JPG, PNG, or WebP image, up to 10 MB per side.",
+            "Choose a non-empty JPG or PNG image, up to 8 MB per side.",
           ),
         );
         return;
@@ -147,12 +147,44 @@ function scanPage(signal) {
     { class: "primary", type: "submit" },
     "Extract fields",
   );
+  const metadata = element(
+    "div",
+    { class: "field-grid" },
+    element(
+      "div",
+      { class: "field" },
+      element("label", { for: "document_type" }, "Document type"),
+      element(
+        "select",
+        { id: "document_type", name: "document_type" },
+        element("option", { value: "driver_license", selected: true }, "Driver license"),
+        element("option", { value: "national_id" }, "National ID"),
+        element("option", { value: "passport" }, "Passport"),
+        element("option", { value: "residence_permit" }, "Residence permit"),
+      ),
+    ),
+    element(
+      "div",
+      { class: "field" },
+      element("label", { for: "country" }, "Country"),
+      element("input", {
+        id: "country",
+        name: "country",
+        value: "DO",
+        maxlength: "3",
+        pattern: "[A-Z]{2,3}",
+        autocomplete: "off",
+        spellcheck: "false",
+      }),
+    ),
+  );
   form.append(
+    metadata,
     uploads,
     element(
       "div",
       { class: "action-row" },
-      text("JPG, PNG, WebP · Up to 10 MB per side", "muted small"),
+      text("JPG or PNG · Up to 8 MB per side", "muted small"),
       submit,
     ),
     errors,
@@ -248,7 +280,7 @@ function detailPage(scan, signal) {
   });
   const grid = element("div", { class: "field-grid" });
   for (const [key, field] of Object.entries(scan.fields)) {
-    const label = element("label", { for: `field-${key}` }, FIELD_LABELS[key]);
+    const label = element("label", { for: `field-${key}` }, field.label || FIELD_LABELS[key] || key.replaceAll("_", " "));
     const value = confirmed
       ? element("p", { class: "field-value" }, field.value || "Not extracted")
       : element("input", {

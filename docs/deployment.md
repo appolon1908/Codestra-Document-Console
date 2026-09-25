@@ -63,7 +63,7 @@ Kong/Middleware equivalents need the same route split and trusted auth context.
 Configure ingress timeout above the browser's 60-second request timeout, or use
 the API's asynchronous `processing` response and manual refresh. Disable proxy
 cache/body capture for document routes. Upload limits should accommodate two
-10 MiB images plus multipart overhead. Do not add QR-fetching or image-fetching
+8 MiB decoded images plus base64/JSON transport overhead. Do not add QR-fetching or image-fetching
 middleware to this console route.
 
 ## Release validation

@@ -1,105 +1,64 @@
-# Assumed Document Intelligence API contract
+# Document Console API contract
 
-This is a proposed integration boundary, not a claim about a deployed API. All
-paths below are relative to `DOCUMENT_API_BASE_URL` (default `/api`). Adapt
-`console/static/api.js` if the authoritative service contract differs. The static
-host only exposes `/`, `/static/*`, `/config`, and `/healthz`.
+The Console is a standalone presentation product. It does not own identity, OCR, document persistence, or biometric data.
 
-## Authentication and transport
+Production request path:
 
-The browser sends `credentials: include`, `Accept: application/json`, `cache:
-no-store`, no referrer, and rejects redirects. Ingress authenticates the session;
-the API derives tenant/operator scope from that authenticated context. No tenant,
-operator, role, or authorization claims are sent from form fields. Every API route,
-including detail/list/confirmation, must independently authorize tenant access.
+`Browser -> Caddy -> Kong -> Middleware V3 -> Document Intelligence`
 
-`GET /auth/context` returns:
+The browser never receives the Document Intelligence workload credential. Middleware/Keycloak own the authenticated operator and tenant context.
 
-```json
-{"tenant_id":"tenant-opaque","operator_id":"operator-opaque","csrf_token":"session-bound-token"}
-```
+## Document Intelligence endpoints used by the Console
 
-Both identity values are displayed literally as text. The token remains in memory,
-is never displayed, and is sent as `X-CSRF-Token` on mutations. API/ingress must
-validate that session-bound token and the request Origin. The console does not
-implement login or issue cookies. Expired or forbidden sessions disable further
-mutations until context is fetched successfully.
-
-## Endpoints
-
-| Method | Path | Response / request |
+| Method | Path | Purpose |
 | --- | --- | --- |
-| GET | `/auth/context` | Auth context above |
-| POST | `/scans` | Multipart `front` (required), `back` (optional); returns scan |
-| GET | `/scans?cursor=opaque` | `{"items":[{"id":"scan-123","status":"unverified","created_at":"2026-09-25T12:00:00Z"}],"next_cursor":null}`; cursor omitted on first page |
-| GET | `/scans/{id}` | Scan |
-| POST | `/scans/{id}/confirm` | JSON `{"fields":{"full_name":"Corrected name","document_number":"123456789"},"version":"v1"}`; returns confirmed scan |
-| GET | `/health` | `{"status":"ok","version":"release-id"}`; status can also be `degraded` or `unavailable` |
+| GET | `/healthz` | Liveness |
+| GET | `/v1/documents?limit=50&cursor=...` | Tenant-scoped recent scan summaries |
+| POST | `/v1/documents/scan` | Create scan from JSON base64 front/back images |
+| GET | `/v1/documents/{scan_id}` | Read one tenant-scoped scan |
+| POST | `/v1/documents/{scan_id}/confirm` | Confirm operator corrections |
 
-All successful responses are JSON (200, 201, or 202 as appropriate). Scan IDs
-must match `[A-Za-z0-9_-]{1,128}`. A scan has this shape:
+The optional `/auth/context` route is an ingress convenience for displaying opaque tenant/operator identifiers. The Console falls back to “managed by ingress” when this display endpoint is absent. It never implements its own user database.
+
+## Scan request
+
+`POST /v1/documents/scan`
 
 ```json
 {
-  "id": "scan-123",
-  "status": "unverified",
-  "created_at": "2026-09-25T12:00:00Z",
-  "version": "v1",
-  "fields": {
-    "full_name": {
-      "value": "Ada Example",
-      "confidence": 0.87,
-      "warnings": ["Check spelling"],
-      "evidence": "Front, line 2"
-    },
-    "document_number": {
-      "value": "123456789",
-      "confidence": 0.99,
-      "warnings": [],
-      "evidence": "Front, line 3"
-    }
-  },
-  "warnings": ["OCR requires operator review"],
-  "qr": {"allowlisted": true, "url": "https://authority.example/check"}
+  "document_type": "driver_license",
+  "country": "DO",
+  "front_image_base64": "<base64>",
+  "back_image_base64": "<base64 or null>"
 }
 ```
 
-Statuses: `unverified`, `confirmed`, `processing`, `failed`. Unverified details
-require a nonempty supported field set and a string `version`. Processing/failed
-responses can omit fields; the operator refreshes them manually. No automatic
-polling or mutation retries. Confirmation must atomically validate `version`,
-record authenticated operator/audit details in the API, apply corrections, and
-return `confirmed` with the same ID. A conflict returns 409 and requires reload.
-The acknowledgement resets when a field changes.
+The Console accepts JPEG and PNG only and applies the same 8 MiB-per-image convenience bound as the current API. Document Intelligence remains authoritative for all image validation.
 
-Supported editable keys: `full_name`, `given_names`, `surname`, `document_number`,
-`document_type`, `date_of_birth`, `expiry_date`, `issue_date`, `nationality`,
-`issuing_country`. Values are strings or null. Unknown keys are discarded; no
-face/image/biometric field is displayed, processed, or submitted. Confidence is
-optional and ranges from 0 to 1. Evidence is plain text, never HTML or image URLs.
+## Review and confirmation
 
-After confirmation the adapter masks the document number to its last four
-characters (fully masks values of four or fewer characters), drops free-text
-warnings/evidence, and displays read-only values. The API should itself return
-only masked document numbers for confirmed records and only metadata for lists.
-Masking here is a display safeguard, not API authorization or a guarantee that an
-API response cannot be inspected in developer tools.
+Document Intelligence reports new scan sessions with status `pending_review`. The Console renders this as **Unverified OCR**.
 
-QR links are rendered only for boolean `allowlisted: true` and an HTTPS URL with
-no credentials. The API owns the destination allowlist. The console never tests,
-resolves, fetches, previews, or automatically opens the destination. Links use
-`noopener noreferrer` and require an operator click.
+`POST /v1/documents/{scan_id}/confirm`
 
-## Errors and resource limits
+```json
+{
+  "corrections": {
+    "full_name": "Corrected name",
+    "document_number": "12345678901"
+  }
+}
+```
 
-401/403, 404, 409, 413, 422, 429, and 5xx have safe local messages. Raw error bodies
-are never rendered or logged. Unexpected JSON and invalid records fail closed.
-Requests time out after 60 seconds; navigation aborts pending requests and rejects
-late results. A timeout/abort can occur after the API accepted a write: check
-recent scans before resubmitting. The API must enforce quotas, actual image
-format/content, file-size limits, and mutation concurrency. The browser accepts
-nonempty JPG/PNG/WebP files up to 10 MiB per side as a convenience check only.
+After confirmation the Console must not display the clear document number. It uses only masked/last-four information returned by Document Intelligence.
 
-API responses containing document data must set `Cache-Control: no-store`.
-Production ingress must not log request/response bodies, CSRF tokens, cookies,
-or extracted fields. Configure image retention only at the API, under its policy.
+## Privacy and trust rules
+
+- Raw document images are not stored by the Console.
+- Browser localStorage/sessionStorage are not used for document data.
+- No biometric fields are rendered.
+- OCR is never presented as authenticity verification.
+- QR/source URLs are shown only when Document Intelligence reports them as allowlisted HTTPS destinations.
+- The Console never fetches authority QR destinations server-side.
+- Server error bodies are never reflected into the UI.
+- Tenant isolation and authorization are enforced by Middleware/Document Intelligence, not by client-side code.

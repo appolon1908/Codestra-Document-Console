@@ -7,7 +7,7 @@ HTTP proxy, or user database.
 
 ## Features
 
-- Front/back image selection and local browser previews; direct multipart API upload.
+- Front/back image selection and local browser previews; JSON base64 upload to the Document Intelligence API.
 - Unverified OCR review, editable fields, confidence, warnings, and evidence.
 - Explicit operator acknowledgement and versioned confirmation; failed confirmations
   remain unverified. Document numbers are masked after API-confirmed success.
@@ -55,7 +55,7 @@ docker run --rm -p 8080:8080 -e DOCUMENT_API_BASE_URL=/api codestra-document-con
 ```
 
 If Chrome is already installed, use `PLAYWRIGHT_CHANNEL=chrome npm test` instead of
-downloading Chromium. Tests exercise desktop and mobile views, multipart uploads,
+downloading Chromium. Tests exercise desktop and mobile views, Document Intelligence JSON uploads,
 corrections, masking, QR policy, identity, API failures, and rendering. Test reports
 must use synthetic data; traces and automatic screenshots are disabled. The JS
 build is a syntax check because the shipped modules require no bundler.

@@ -23,7 +23,7 @@ def test_shell_and_assets_are_private(monkeypatch):
 def test_health_is_local_and_host_never_accepts_uploads(monkeypatch):
     with client(monkeypatch) as c:
         assert c.get("/healthz").json() == {"status": "ok", "service": "document-console"}
-        assert c.post("/api/scans", files={"front": ("front.png", b"image")}).status_code == 404
+        assert c.post("/api/v1/documents/scan", json={"document_type": "driver_license"}).status_code == 404
 
 
 def test_external_api_origin_added_to_csp(monkeypatch):
