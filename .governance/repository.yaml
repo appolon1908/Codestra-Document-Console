@@ -1,0 +1,12 @@
+version: 1
+repository: Codestra-Document-Console
+repository_url: https://github.com/ingtrader21-spec/Codestra-Document-Console.git
+canonical_path: /home/codestra/Worktrees/document-intelligence/Codestra-Document-Console
+active_worktree: /home/codestra/Worktrees/document-intelligence/Codestra-Document-Console
+active_branch: mission/document-intelligence-foundation-20260925
+base_branch: development
+base_sha: ad7f3c924c3ed0953a0f0dca48a844e08805f35a
+upstream_ref: origin/mission/document-intelligence-foundation-20260925
+publication_branch: mission/document-intelligence-foundation-20260925
+production_effects_allowed: false
+certification_mode: isolated_exact_sha

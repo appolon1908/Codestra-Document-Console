@@ -1,0 +1,60 @@
+name: ci
+
+on:
+  push:
+    branches: ["development", "testing", "staging", "production", "mission/**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install Python
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[test]"
+      - name: Install Node
+        run: npm ci
+      - name: JavaScript syntax
+        run: npm run build
+      - name: Node API contract tests
+        run: npm run test:contract
+      - name: Python server tests
+        run: python -m pytest -q
+      - name: Docker build
+        run: docker build -t codestra-document-console:ci .
+
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: python -m pip install --upgrade pip && python -m pip install -e ".[test]"
+      - run: npm ci
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Browser tests
+        run: npm test

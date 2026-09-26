@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Document Intelligence · Codestra</title>
+    <link rel="stylesheet" href="/static/style.css" />
+    <script type="module" src="/static/app.js"></script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="topbar">
+      <a class="brand" href="#scan"
+        ><span class="brand-icon" aria-hidden="true">C</span
+        ><span>CODESTRA<small>Document Intelligence</small></span></a
+      >
+      <div class="identity" id="identity">Verifying operator context…</div>
+    </header>
+    <div class="layout">
+      <aside>
+        <div class="nav-label">WORKSPACE</div>
+        <nav aria-label="Main navigation">
+          <a href="#scan">Scan document</a><a href="#recent">Recent scans</a
+          ><a href="#system">Health &amp; system</a>
+        </nav>
+        <div class="sidebar-note">
+          <span class="dot"></span> Human review required
+          <p>OCR is a starting point.<br />You make the final decision.</p>
+        </div>
+      </aside>
+      <main id="main" tabindex="-1">
+        <p role="status">Connecting to Document Intelligence…</p>
+      </main>
+    </div>
+    <footer>
+      Document Intelligence
+      <span>Operator workspace · Images sent directly to the API</span>
+    </footer>
+    <noscript
+      >This console requires JavaScript to connect to the Document Intelligence
+      API.</noscript
+    >
+  </body>
+</html>
